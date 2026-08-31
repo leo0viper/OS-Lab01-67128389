@@ -1,16 +1,18 @@
 ======================================================
 COE67-XXX Operating Systems - Lab 01 Report
-Name: 
-Student ID: 
+Name: [โสภณ ถิ่นวัดกลาง]
+Student ID: [67128389]
 ======================================================
 
 1. Hardware Baseline:
-- OS Version:
-- Number of CPU Cores:
-- Total RAM:
+- OS Version: Linux 6.8.0-1052-azure
+- Number of CPU Cores: 2 Cores 
+- Total RAM: 7.76 GB 
 
 2. Observation (from htop during stress test):
-[Write your answer here]
+During the stress test, the Python script utilized 100% of only ONE CPU core (e.g., Core 1 peaked at 100% while other cores remained mostly idle). It did not utilize all available CPU cores simultaneously. This behavior occurs because standard Python (CPython) execution is single-threaded and constrained by the Global Interpreter Lock (GIL), preventing the loop from running across multiple cores at the same time. Once the process was terminated with Ctrl+C, the OS scheduler immediately reclaimed the CPU resources, dropping usage back to baseline levels.
 
 3. Analysis:
-[Write your answer here]
+When training machine learning models with large datasets (such as 500,000 images), knowing the OS limits is critical for several reasons:
+1. Memory Management (RAM): 500,000 high-resolution images cannot fit directly into system memory all at once. Knowing the total RAM allows developers to design data pipelines using batch loading, memory-mapped files, and appropriate batch sizes to avoid triggering Out-Of-Memory (OOM) kernel panics or swapping to disk, which drastically degrades performance.
+2. CPU Utilization & Data Loading: Preprocessing 500,000 images (resizing, normalization, data augmentation) is CPU-intensive. Knowing the number of CPU cores helps properly configure multi-processing workers (such as 'num_workers' in PyTorch/DataLoader) to parallelize data pipelines, ensuring the CPU feeds data fast enough without bottlenecking the training process or overloading the OS scheduler.
