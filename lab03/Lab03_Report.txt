@@ -1,0 +1,19 @@
+======================================================
+COE67-222 Operating Systems - Lab 03 Report
+Name: [โสภณ ถิ่นวัดกลาง]
+Student ID: 67128389
+======================================================
+1. The Race Condition (Phase 2):
+In the race_condition.py script, updating 'shared_weight' is a non-atomic operation that requires three steps: reading the current value, incrementing it, and writing the new value back to memory. The OS Scheduler performs context switching between the two threads while one thread is paused (simulated by sleep). This causes the second thread to read stale data before the first thread can write back its updated value. Whichever thread writes last overwrites the other thread's result, causing lost updates and leaving the final weight less than the expected 200.
+
+2. Mutex vs. Semaphore (Phase 3):
+- Specific job of the mutex: Ensures Mutual Exclusion by allowing only one thread at a time into the Critical Section (modifying buffer contents, in_index, and out_index), preventing corrupted data states.
+- Specific job of empty and full semaphores: Serve as counting synchronization signals. 'empty' tracks available vacant buffer slots and blocks the Producer when the buffer is full; 'full' tracks available items ready to be consumed and blocks the Consumer when the buffer is empty.
+- Why we cannot just use a Mutex for everything: A Mutex only provides binary locking (Lock/Unlock) and cannot count resources or signal availability across threads. Without semaphores, threads would need to use inefficient busy-waiting loops to check if space or items are available.
+
+3. Deadlock Awareness:
+If we swap the lines to:
+    mutex.acquire()
+    empty.acquire()
+When the buffer becomes completely full (empty slots == 0):
+The Producer acquires the mutex and locks the buffer. Then it calls empty.acquire() and gets blocked because empty is 0. Meanwhile, the Consumer attempts to consume an item to free up a slot, but it gets blocked at mutex.acquire() because the Producer is holding the lock. Both threads end up permanently waiting for each other, resulting in a Deadlock.
