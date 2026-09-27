@@ -1,0 +1,35 @@
+======================================================
+COE67-222 Operating Systems - Lab 09 Report
+Name: โสภณ ถิ่นวัดกลาง
+Student ID: 67128389
+======================================================
+
+1. Inodes and Metadata:
+In the `inode_inspector.py` script, we printed the "Inode Number". If you rename the file using the Linux `mv` command, will the Inode Number change? Why or why not? (Hint: Think about how the OS separates the file name from the actual data).
+
+Answer:
+หมายเลข Inode Number จะไม่เปลี่ยนแปลง (ยังคงเป็นค่าเดิม)
+เหตุผล: ในระบบไฟล์ของ Linux ชื่อไฟล์กับข้อมูลจริงและ Metadata ถูกแยกออกจากกันอย่างชัดเจน โดย Inode ทำหน้าที่จัดเก็บ Metadata และตัวชี้ตำแหน่ง Data Block ของไฟล์ ส่วน Directory เป็นเพียงตารางที่จับคู่ "ชื่อไฟล์" เข้ากับ "Inode Number" เท่านั้น ดังนั้น เมื่อใช้คำสั่ง `mv` เพื่อเปลี่ยนชื่อไฟล์บนไดรฟ์เดียวกัน ระบบปฏิบัติการจะแก้ไขเพียงตัวชี้ชื่อใน Directory Entry เท่านั้น โดยไม่มีการเคลื่อนย้ายหรือสร้าง Inode ใหม่แต่อย่างใด
+
+------------------------------------------------------
+
+2. POSIX Permissions:
+If you want to set a file's permission so that the Owner has Read/Write/Execute (7), the Group has Read/Execute (5), and Others have absolutely no access (0), what would be the 3-digit octal number you pass into `os.chmod()`? 
+
+Answer:
+ตัวเลข Octal 3 หลักคือ 750
+โดยในภาษา Python จะส่งค่าเป็น 0o750 เข้าไปยังฟังก์ชัน os.chmod()
+- Owner (User) = Read (4) + Write (2) + Execute (1) = 7
+- Group = Read (4) + Execute (1) = 5
+- Others = No access (0) = 0
+
+------------------------------------------------------
+
+3. The AI Context:
+Why is it safer to rely on Operating System file permissions (like `os.chmod(0o444)`) to protect production model weights rather than relying solely on application-level logic or Python try-except blocks?
+
+Answer:
+การป้องกันระดับระบบปฏิบัติการ (OS-level permissions) ปลอดภัยกว่าระดับ Application หรือโค้ด Python มาก เพราะว่า:
+1. การบังคับใช้กฎเกิดขึ้นที่ระดับ OS Kernel: สิทธิ์ถูกควบคุมเป็น Gatekeeper โดย Kernel ของระบบปฏิบัติการโดยตรง หากโปรแกรมใดพยายามเปิดไฟล์ในโหมดเขียน Kernel จะปฏิเสธ System Call ทันที ไม่ว่าโค้ดนั้นจะเขียนด้วยภาษาใด (Python, C++, Shell script) หรือสั่งผ่าน CLI ก็ไม่สามารถละเมิดได้
+2. ป้องกัน Human Error และบั๊กของซอฟต์แวร์: การพึ่งพา application logic หรือ try-except ในโค้ด Python มีความเสี่ยงสูง เพราะนักพัฒนาอาจเขียนโค้ดพลาด ลืมใส่เงื่อนไขดักจับ หรือเผลอเปิดไฟล์ด้วย flag 'w' (Write) ซึ่งจะทำการตัดลบข้อมูลไฟล์ (Truncate) ทิ้งทันทีตั้งแต่บรรทัด open()
+3. ความปลอดภัยบน Shared Cluster (HPC): ในสภาพแวดล้อมที่แชร์ทรัพยากรร่วมกัน ผู้ใช้หลายคนสามารถรันโปรแกรมหรือสคริปต์ที่ต่างกันได้ การกำหนดสิทธิ์ระดับไฟล์ให้อยู่ในสถานะ Read-Only (0o444) จะเป็นเกราะป้องกันถาวรที่ป้องกันไม่ให้สคริปต์ที่ไม่สมบูรณ์หรือเจตนาร้ายเข้ามาเขียนทับไฟล์ Model Weights ที่มีมูลค่าสูงได้อย่างแท้จริง
