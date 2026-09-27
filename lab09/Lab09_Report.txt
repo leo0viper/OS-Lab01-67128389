@@ -5,31 +5,41 @@ Student ID: 67128389
 ======================================================
 
 1. Inodes and Metadata:
-In the `inode_inspector.py` script, we printed the "Inode Number". If you rename the file using the Linux `mv` command, will the Inode Number change? Why or why not? (Hint: Think about how the OS separates the file name from the actual data).
+In the `inode_inspector.py` script, we printed the "Inode Number". If you rename the file using the Linux 
+`mv` command, will the Inode Number change? Why or why not? (Hint: Think about how the OS separates the file name from the actual data).
 
 Answer:
-หมายเลข Inode Number จะไม่เปลี่ยนแปลง (ยังคงเป็นค่าเดิม)
-เหตุผล: ในระบบไฟล์ของ Linux ชื่อไฟล์กับข้อมูลจริงและ Metadata ถูกแยกออกจากกันอย่างชัดเจน โดย Inode ทำหน้าที่จัดเก็บ Metadata และตัวชี้ตำแหน่ง Data Block ของไฟล์ ส่วน Directory เป็นเพียงตารางที่จับคู่ "ชื่อไฟล์" เข้ากับ "Inode Number" เท่านั้น ดังนั้น เมื่อใช้คำสั่ง `mv` เพื่อเปลี่ยนชื่อไฟล์บนไดรฟ์เดียวกัน ระบบปฏิบัติการจะแก้ไขเพียงตัวชี้ชื่อใน Directory Entry เท่านั้น โดยไม่มีการเคลื่อนย้ายหรือสร้าง Inode ใหม่แต่อย่างใด
+หมายเลข Inode Number จะ "ไม่เปลี่ยนแปลง" และยังคงเป็นเลขเดิมครับ (จากการรันสคริปต์ของผมคือหมายเลข 1466337)
+เหตุผลตามความเข้าใจของผม:
+ในระบบ Linux ข้อมูลเนื้อหาจริงกับชื่อไฟล์ถูกแยกออกจากกันครับ ตัว Inode จะเป็นตัวเก็บข้อมูลของไฟล์จริงๆ (Metadata, ขนาดไฟล์, สิทธิ์ และตำแหน่งเก็บข้อมูลบนดิสก์)
+ ส่วนชื่อไฟล์เป็นแค่ป้ายชื่อในโฟลเดอร์ (Directory) ที่ชี้ไปยังหมายเลข Inode นั้นเฉยๆ ดังนั้น เวลาเราใช้คำสั่ง `mv` เพื่อเปลี่ยนชื่อไฟล์ 
+ ระบบปฏิบัติการจะเข้าไปแก้แค่ป้ายชื่อที่ผูกอยู่เท่านั้น แต่ไม่ได้ไปยุ่งหรือสร้างตัว Inode ก้อนเดิมขึ้นมาใหม่ ทำให้หมายเลข Inode ยังคงเป็นเลขเดิมเสมอ
 
 ------------------------------------------------------
 
 2. POSIX Permissions:
-If you want to set a file's permission so that the Owner has Read/Write/Execute (7), the Group has Read/Execute (5), and Others have absolutely no access (0), what would be the 3-digit octal number you pass into `os.chmod()`? 
+If you want to set a file's permission so that the Owner has Read/Write/Execute (7), the Group has Read/Execute (5), and Others have 
+absolutely no access (0), what would be the 3-digit octal number you pass into `os.chmod()`? 
 
 Answer:
-ตัวเลข Octal 3 หลักคือ 750
-โดยในภาษา Python จะส่งค่าเป็น 0o750 เข้าไปยังฟังก์ชัน os.chmod()
-- Owner (User) = Read (4) + Write (2) + Execute (1) = 7
-- Group = Read (4) + Execute (1) = 5
-- Others = No access (0) = 0
+ตัวเลขฐานแปด (Octal) 3 หลักคือ `750` ครับ
+ถ้าเขียนในโค้ด Python จะส่งค่าเป็น `0o750` เข้าฟังก์ชัน `os.chmod()` โดยคิดจากผลรวมของแต่ละกลุ่ม:
+- เจ้าของ (Owner) = อ่าน (4) + เขียน (2) + รัน (1) = 7
+- กลุ่ม (Group) = อ่าน (4) + รัน (1) = 5
+- คนนอก (Others) = ไม่มีสิทธิ์อะไรเลย = 0
 
 ------------------------------------------------------
 
 3. The AI Context:
-Why is it safer to rely on Operating System file permissions (like `os.chmod(0o444)`) to protect production model weights rather than relying solely on application-level logic or Python try-except blocks?
+Why is it safer to rely on Operating System file permissions (like `os.chmod(0o444)`) to protect production model weights rather than relying
+ solely on application-level logic or Python try-except blocks?
 
 Answer:
-การป้องกันระดับระบบปฏิบัติการ (OS-level permissions) ปลอดภัยกว่าระดับ Application หรือโค้ด Python มาก เพราะว่า:
-1. การบังคับใช้กฎเกิดขึ้นที่ระดับ OS Kernel: สิทธิ์ถูกควบคุมเป็น Gatekeeper โดย Kernel ของระบบปฏิบัติการโดยตรง หากโปรแกรมใดพยายามเปิดไฟล์ในโหมดเขียน Kernel จะปฏิเสธ System Call ทันที ไม่ว่าโค้ดนั้นจะเขียนด้วยภาษาใด (Python, C++, Shell script) หรือสั่งผ่าน CLI ก็ไม่สามารถละเมิดได้
-2. ป้องกัน Human Error และบั๊กของซอฟต์แวร์: การพึ่งพา application logic หรือ try-except ในโค้ด Python มีความเสี่ยงสูง เพราะนักพัฒนาอาจเขียนโค้ดพลาด ลืมใส่เงื่อนไขดักจับ หรือเผลอเปิดไฟล์ด้วย flag 'w' (Write) ซึ่งจะทำการตัดลบข้อมูลไฟล์ (Truncate) ทิ้งทันทีตั้งแต่บรรทัด open()
-3. ความปลอดภัยบน Shared Cluster (HPC): ในสภาพแวดล้อมที่แชร์ทรัพยากรร่วมกัน ผู้ใช้หลายคนสามารถรันโปรแกรมหรือสคริปต์ที่ต่างกันได้ การกำหนดสิทธิ์ระดับไฟล์ให้อยู่ในสถานะ Read-Only (0o444) จะเป็นเกราะป้องกันถาวรที่ป้องกันไม่ให้สคริปต์ที่ไม่สมบูรณ์หรือเจตนาร้ายเข้ามาเขียนทับไฟล์ Model Weights ที่มีมูลค่าสูงได้อย่างแท้จริง
+จากที่เห็นในสคริปต์ `ai_weight_protection.py` การล็อกสิทธิ์ที่ระดับ OS ปลอดภัยกว่าการพึ่งโค้ด Python หรือ try-except มาก เพราะว่า:
+1. เคอร์เนลเป็นตัวคุมกฎเด็ดขาด: สิทธิ์ระดับ OS จะถูกตรวจเช็กโดย Kernel ของระบบปฏิบัติการโดยตรง หากไฟล์ถูกตั้งเป็น Read-Only (0o444) 
+พอมีสคริปต์สั่งเปิดไฟล์ด้วยโหมดเขียน (`w`) ตัวเคอร์เนลจะบล็อกและโยน PermissionError ใส่ทันที ไม่ว่าสคริปต์นั้นจะเขียนด้วยภาษาอะไร หรือเผลอกดคำสั่งลบผ่าน Terminal
+ ก็ไม่สามารถเขียนทับได้
+2. ป้องกัน Human Error ได้จริง: ถ้าเราหวังพึ่งแค่ try-except ในโปรแกรม หากมีโปรแกรมเมอร์เผลอลืมใส่ หรือเขียนโค้ดพลาดไปเปิดไฟล์แบบ `open(..., "w")` 
+ตัวคำสั่ง open ของไพธอนจะตัดลบเนื้อหาในไฟล์เดิมทิ้งทันทีตั้งแต่ยังไม่ทันได้เขียนข้อมูลใหม่ ทำให้ไฟล์ Model Weights เสียหายได้เลย
+3. ปลอดภัยบนคลัสเตอร์ส่วนกลาง: ในเครื่องเซิร์ฟเวอร์ที่ใช้ร่วมกันหลายคน การล็อกสิทธิ์ระดับไฟล์ให้เป็น Read-Only ถาวร จะเป็นเกราะป้องกันไม่ให้สคริปต์ของคนอื่นที่อาจมีบั๊ก
+ เผลอมาเขียนทับหรือทำลายโมเดลของเราได้
