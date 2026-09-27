@@ -5,11 +5,17 @@ Student ID: 67128389
 ======================================================
 
 1. The Convoy Effect (Phase 2):
-In the FCFS output of `cpu_scheduler.py`, what is the "Convoy Effect"? How did the presence of Process P1 affect the waiting times of P2 and P3?
+In the FCFS output of `cpu_scheduler.py`, what is the "Convoy Effect"? How did the presence of Process P1 affect 
+the waiting times of P2 and P3?
 
 Answer:
-- "Convoy Effect" คือ ปรากฏการณ์คอขวดที่โปรเซสขนาดสั้นๆ (Short processes) หรือโปรเซสที่ใช้เวลาทำงานน้อย ต้องติดค้างรอคิวอยู่ด้านหลังโปรเซสขนาดใหญ่ที่ใช้เวลา CPU นานมาก (Long/CPU-heavy process) เนื่องจากอัลกอริทึม FCFS เป็นแบบ Non-preemptive ที่ไม่สามารถสลับงานกลางคันได้
-- ผลกระทบจาก Process P1: เนื่องจาก P1 เข้ามาคิวแรกและต้องใช้ Burst time นานถึง 10 หน่วย ทำให้ P2 (ใช้เวลาเพียง 2 หน่วย) ต้องรอถึง 10 หน่วยเวลา และ P3 (ใช้เวลา 3 หน่วย) ต้องรอถึง 12 หน่วยเวลา ส่งผลให้ค่า Average Waiting Time ของระบบพุ่งสูงขึ้นอย่างมาก (FCFS รอเฉลี่ย 7.33 หน่วย เทียบกับ Round Robin ที่รอเฉลี่ยเพียง 3.00 หน่วย)
+- Convoy Effect ตามความเข้าใจของผม:
+คืออาการคอขวดเหมือน "ขบวนรถติดยาวตามหลังรถบรรทุกช้าๆ" ที่งานเล็กๆ หรือโปรเซสที่ใช้เวลาประมวลผลแป๊บเดียว ต้องมาติดค้างรอคอยงานชิ้นใหญ่ที่ใช้เวลา CPU นานมาก 
+เพราะว่า FCFS เป็นระบบที่มาก่อนได้รันจนจบ ใครมาแทรกหรือตัดหน้าไม่ได้
+- ผลกระทบจาก Process P1 ต่อ P2 และ P3:
+จากผลการรันจริง เนื่องจาก P1 เป็นงานหนักที่กินเวลาถึง 10 หน่วยเวลา ทำให้ P2 (ซึ่งใช้เวลาแค่ 2 หน่วย) ต้องรอถึง 10 หน่วย และ P3 (ใช้เวลาแค่ 3 หน่วย) 
+ต้องรอนานถึง 12 หน่วยเวลากว่าจะได้รัน ส่งผลให้เวลารอเฉลี่ยของระบบพุ่งสูงขึ้นไปถึง 7.33 หน่วยเวลา ทั้งๆ ที่งานข้างหลังเกือบเสร็จได้ทันที แต่พอเปลี่ยนมาใช้ 
+Round Robin (Quantum = 3) ให้สลับรันทีละนิด P2 กับ P3 จบงานได้ไวขึ้นมาก และดึงเวลารอเฉลี่ยลดลงมาเหลือเพียง 4.33 หน่วยเวลา
 
 ------------------------------------------------------
 
@@ -19,14 +25,28 @@ In Round Robin, the Time Quantum is critical.
 - What happens if the OS sets the Time Quantum extremely small (e.g., Quantum = 0.0001)? (Hint: Think about Context Switching overhead).
 
 Answer:
-- หากตั้งค่า Time Quantum สูงมากเกินไป (เช่น Quantum = 100): โปรเซสเกือบทั้งหมดจะสามารถประมวลผลจนเสร็จสมบูรณ์ได้ภายใน Quantum เดียวโดยไม่ถูกขัดจังหวะ (Preempt) ทำให้อัลกอริทึม Round Robin จะกลายสภาพไปทำงานเหมือนกับอัลกอริทึม First-Come, First-Served (FCFS) ส่งผลให้เกิด Convoy Effect ได้เช่นเดิม
-- หากตั้งค่า Time Quantum ต่ำมากเกินไป (เช่น Quantum = 0.0001): ระบบจะต้องทำการสลับโปรเซส (Context Switching) บ่อยครั้งมากจนเกินไป ค่า Overhead ของการบันทึกและโหลดสถานะ Register/PCB จะสะสมจนกินเวลาของ CPU ส่วนใหญ่ ทำให้ CPU เสียประสิทธิภาพ (Throughput ลดลงอย่างรุนแรง) แทนที่จะได้ประมวลผลเนื้องานจริง
+- ถ้าตั้ง Time Quantum ใหญ่เกินไป (เช่น Quantum = 100):
+ทุกโปรเซสจะสามารถรันงานของตัวเองจนเสร็จได้ในรอบเดียวโดยไม่โดนขัดจังหวะเลย ทำให้ Round Robin กลายสภาพไปทำงานเหมือนกับ FCFS (มาก่อนได้ก่อน) 
+ไปโดยปริยาย และปัญหาขบวนรถติด (Convoy Effect) ก็จะกลับมาเหมือนเดิม
+
+- ถ้าตั้ง Time Quantum สั้นเกินไป (เช่น Quantum = 0.0001):
+ระบบจะต้องเสียเวลาสลับงาน (Context Switching) บ่อยเกินความจำเป็น โดย CPU จะมัวแต่วุ่นวายกับการบันทึกและโหลดสถานะของแต่ละโปรเซส (Overhead สูง) 
+จนแทบไม่มีเวลาเหลือไปประมวลผลเนื้องานจริง ทำให้ระบบช้าลงและสูญเสียประสิทธิภาพไปโดยเปล่าประโยชน์
 
 ------------------------------------------------------
 
 3. AI Context:
-In Phase 3, we used a Round Robin approach for generating tokens in an LLM. Explain why iteration-level Round Robin scheduling prevents long user queries from starving short queries, and how it improves perceived latency (Time To First Token / TTFT) for interactive AI applications.
+In Phase 3, we used a Round Robin approach for generating tokens in an LLM. Explain why iteration-level Round Robin scheduling 
+prevents long user queries from starving short queries, and how it improves perceived latency (Time To First Token / TTFT) 
+for interactive AI applications.
 
 Answer:
-- การใช้ Round Robin ในระดับ Token (Continuous Batching) ช่วยแบ่งการสร้างข้อความออกเป็นรอบย่อยๆ ทีละ 1 โทเคน ทำให้ผู้ใช้ที่ส่งคำค้นหาสั้นๆ (เช่น คำนวณเลข 2 โทเคน) ได้รับสิทธิ์รันสลับกับผู้ใช้ที่ขอคำตอบยาวๆ ทันที ไม่ต้องรอให้คำค้นหายาวสร้างครบ 1,000 โทเคนก่อน จึงช่วยป้องกันภาวะ Starvation ของคำร้องขนาดสั้นได้อย่างสมบูรณ์
-- ช่วยปรับปรุง Perceived Latency (TTFT): ในระบบ Interactive AI ความรู้สึกของผู้ใช้จะขึ้นอยู่กับว่าระบบเริ่มตอบสนองคำแรกเร็วแค่ไหน การสลับสร้างทีละโทเคนทำให้ผู้ใช้ทุกคนได้รับโทเคนแรก (First Token) เกือบจะในทันที ไม่รู้สึกว่าแอปพลิเคชันค้าง และคำร้องสั้นๆ ก็สามารถจบงานและส่งคำตอบคืนผู้ใช้ได้อย่างรวดเร็ว
+- การป้องกันการอดตาย (Starvation) ของคำร้องสั้น:
+การนำ Round Robin ระดับโทเคน (Continuous Batching) มาใช้ คือการแบ่งให้ AI สร้างข้อความทีละ 1 โทเคนสลับวนกันไป ทำให้คนที่มีคำถามสั้นๆ 
+(เช่น ให้คำนวณเลข 2 โทเคน) ได้รับคำตอบครบและออกจากระบบได้ทันที ไม่ต้องติดแหง็กนั่งรอคำขอของคนอื่นที่สั่งเขียนบทความยาว 1,000 โทเคนจนเสร็จ
+
+- ช่วยปรับปรุง Perceived Latency (TTFT):
+ในแอป AI ความรู้สึกว่าระบบเร็วหรือไม่ อยู่ที่ว่า "คำตอบแรกโผล่มาเร็วแค่ไหน" การสลับสร้างทีละโทเคนทำให้ผู้ใช้ทุกคนเห็นข้อความคำแรก (First Token) 
+เด้งขึ้นมาบนจอแทบจะในทันที ไม่รู้สึกว่าแอปค้างหรือหน้าจอนิ่งไปนาน และงานสั้นๆ ก็ส่งคำตอบกลับหาผู้ใช้ได้เร็วขึ้นอย่างมากgit add lab07/Lab07_Report.txt
+git commit -m "Update Lab 07 Report with actual results and concise student tone"
+git push
