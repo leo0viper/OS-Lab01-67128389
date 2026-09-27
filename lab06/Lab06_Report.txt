@@ -1,0 +1,28 @@
+======================================================
+COE67-222 Operating Systems - Lab 06 Report
+Name: โสภณ ถิ่นวัดกลาง
+Student ID: 67128389
+======================================================
+
+1. FIFO vs LRU (Phase 2):
+In the `page_replacement.py` script, why did the LRU algorithm perform better (have fewer page faults) than the FIFO algorithm for the given reference string? Explain how LRU decides which page to evict.
+
+Answer:
+อัลกอริทึม LRU ให้ผลลัพธ์ที่ดีกว่าและมี Page Fault น้อยกว่า FIFO (LRU เกิด 7 ครั้ง ขณะที่ FIFO เกิด 9 ครั้ง) เนื่องจาก LRU ตัดสินใจขับหน้า (Evict) ออกจากหน่วยความจำโดยพิจารณาจากหน้าที่ไม่ได้ถูกเรียกใช้งานมาเป็นระยะเวลานานที่สุด ซึ่งสอดคล้องกับหลักการ Temporal Locality เมื่อหน้าใดถูกเรียกซ้ำ (Page Hit) LRU จะขยับค่านั้นไปไว้ท้ายสุดเสมอว่าเป็นข้อมูลล่าสุด ทำให้หน้าที่ถูกใช้บ่อยยังคงอยู่ใน RAM ต่างจาก FIFO ที่ขับหน้าที่โหลดเข้ามาตัวแรกสุดออกไปเสมออย่างตาบอด (Blind eviction) แม้ว่าหน้านั้นจะเพิ่งถูกเรียกใช้หรือกำลังจะถูกเรียกใช้อีกครั้งในทันทีก็ตาม
+
+------------------------------------------------------
+
+2. Understanding Thrashing (Phase 3):
+Based on your observation of `ai_thrashing.py`, define "Thrashing" in your own words. Why is the processing time significantly higher in Scenario 2?
+
+Answer:
+- Thrashing คือ สภาวะที่ระบบปฏิบัติการใช้เวลาและภาระส่วนใหญ่ไปกับการสลับหน้าข้อมูลเข้า-ออกระหว่าง RAM กับ Storage/Disk (Swapping/Paging) จนระบบแทบไม่ได้ประมวลผลงานของโปรแกรมจริง ส่งผลให้ประสิทธิภาพระบบตกฮวบลงอย่างหนัก
+- ที่ Processing Time ใน Scenario 2 สูงกว่ามาก เป็นเพราะความเร็วในการเข้าถึงข้อมูล (I/O Latency) ของ Disk/Storage ช้ากว่า Physical RAM อย่างมหาศาล (ระดับมิลลิวินาทีเทียบกับนาโนวินาที) เมื่อเกิด Thrashing และต้องอ่านเขียนดิสก์วนซ้ำๆ ต่อเนื่อง จึงทำให้เวลาในการประมวลผลเพิ่มขึ้นหลายร้อยเท่า
+
+------------------------------------------------------
+
+3. AI Engineering Decision:
+If you are training an AI model and your system begins to thrash because the RAM is full, lowering the `batch_size` in your Python code is a common solution. How does lowering the `batch_size` help the Operating System resolve the Thrashing problem?
+
+Answer:
+การลด batch_size จะช่วยลดขนาดข้อมูลและ Activation Tensors ในแต่ละรอบการคำนวณ (Forward/Backward pass) ทำให้ Working Set ของโปรแกรมมีขนาดเล็กลงจนสามารถบรรจุลงใน Physical RAM ได้อย่างพอดี เมื่อ RAM มีพื้นที่เพียงพอ ระบบปฏิบัติการก็ไม่จำเป็นต้องสลับข้อมูลออกไปยัง Swap File บนดิสก์ อัตราการเกิด Page Fault จะหมดไป และโปรแกรมสามารถดึงข้อมูลประมวลผลด้วยความเร็วสูงสุดจาก RAM ได้โดยตรง ช่วยแก้ปัญหา Thrashing ได้ทันที
