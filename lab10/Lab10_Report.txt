@@ -11,37 +11,50 @@ Match the specific code behavior in `ultimate_cluster_os.py` to the correspondin
 - File System & Permissions (Lab 9): 
   [Explain which line of code simulated this and why Workload D failed]
   Answer: จำลองด้วยคำสั่ง `if not os.path.exists(dataset_path):` ในฟังก์ชัน `_execute_job` 
-  สาเหตุที่ Workload D ล้มเหลว: เนื่องจาก Workload D ร้องขอไฟล์ชื่อ `secret_keys.txt` ซึ่งไม่มีอยู่จริงใน File System (หรือไม่มีสิทธิ์เข้าถึง) เมื่อ Kernel ตรวจสอบ Inode/Path แล้วไม่พบ จึงทำการ Reject คำร้องทิ้งทันที โดยไม่ปล่อยให้โปรเซสเข้าสู่ขั้นตอนการจอง RAM หรือ GPU เป็นการปกป้องความปลอดภัยของระบบ
+  สาเหตุที่ Workload D ล้มเหลว: จากผลการรันจริง พอ Workload D ร้องขอไฟล์ชื่อ `secret_keys.txt` ซึ่งไม่มีอยู่จริงในระบบ ตัว OS 
+  จะตรวจสอบเส้นทางไฟล์และบล็อกทิ้งทันที โดยขึ้นข้อความแจ้งว่า FAILED ตั้งแต่หน้าด่าน ทำให้โปรเซสถูกดีดออกจากระบบทันทีโดยไม่หลุดเข้าไปจอง RAM หรือ GPU 
+  ช่วยป้องกันไม่ให้โปรเซสที่ผิดพลาดหรือไฟล์อันตรายเข้ามาเปลืองทรัพยากรส่วนกลาง
 
 - Memory Management (Labs 5/6):
   [Explain how the OS prevented Thrashing by using the `while` loop for RAM allocation]
-  Answer: จำลองด้วยลูป `while True:` ที่คอยตรวจสอบเงื่อนไข `if self.available_ram_gb >= req_ram:` ร่วมกับการใช้ `ram_lock`
-  การป้องกัน Thrashing: OS จะไม่อนุญาตให้โปรเซสเริ่มทำงานจนกว่าจะมี Physical RAM ที่ว่างเพียงพอรองรับขนาด Working Set ของงานนั้นจริงๆ หากหน่วยความจำไม่พอ โปรเซสจะต้องรอคอย (Sleep/Wait) ใน Waiting State ก่อน การควบคุมโควตาหน่วยความจำแบบนี้ช่วยป้องกันไม่ให้ระบบจัดสรร RAM เกินขนาด (Overcommit) จนเกิดสภาวะ Thrashing และการสลับหน้าหน่วยความจำเข้าออกฮาร์ดดิสก์อย่างบ้าคลั่ง
+  Answer: จำลองด้วยลูป `while True:` ที่คอยตรวจสอบว่า `if self.available_ram_gb >= req_ram:` ร่วมกับการใช้ `ram_lock` 
+  วิธีป้องกัน Thrashing: OS จะไม่อนุญาตให้โปรเซสเริ่มทำงานจนกว่าจะมี Physical RAM ที่ว่างอยู่จริงเพียงพอกับที่งานนั้นขอ ถ้า RAM ยังไม่พอ 
+  ตัวโปรเซสจะต้องติดอยู่ในลูปและหลับรอ (Sleep/Wait) ไปก่อน การทำแบบนี้ช่วยป้องกันไม่ให้ระบบแจกจ่าย RAM เกินความจุจริง (Overcommit) 
+   Thrashing และต้องคอยสลับข้อมูลลง Swap บนดิสก์จนเครื่องค้าง
 
 - Concurrency & Deadlocks (Labs 3/4):
   [Explain how the OS sorted the requested GPUs to avoid Circular Wait deadlocks]
-  Answer: จำลองด้วยคำสั่ง `sorted_gpus = sorted(req_gpus)` และการทยอยล็อก GPU ตามลำดับจากน้อยไปมาก `for gpu in sorted_gpus: self.gpu_locks[gpu].acquire()`
-  การแก้ปัญหา Deadlock: เป็นการประยุกต์ใช้กฎ Resource Ordering (Resource Hierarchy) เพื่อทำลายเงื่อนไข "Circular Wait" (การรอคอยแบบวงกลม) เช่น แม้ว่า Workload A จะส่งรายการ GPU เข้ามาเป็น [2, 1, 0] แต่ระบบจะจัดเรียงใหม่ให้จอง GPU 0 ก่อน ตามด้วย 1 และ 2 เสมอ ทำให้ไม่มีกรณีที่สองโปรเซสต่างถือ GPU คนละตัวแล้วรอสลับกันจนระบบค้างแบบ Deadlock
+  Answer: จำลองด้วยคำสั่ง `sorted_gpus = sorted(req_gpus)` แล้วค่อยสั่งล็อกทีละตัวตามลำดับ `for gpu in sorted_gpus: self.gpu_locks[gpu].acquire()` 
+  การแก้ปัญหา Deadlock: เป็นการนำกฎ Resource Hierarchy มาใช้ทำลายเงื่อนไขการรอคอยเป็นวงกลม (Circular Wait) เช่น ตอนส่งงาน Workload A เข้ามา 
+  มันขอการ์ดจอเป็น [2, 1, 0] แต่โค้ดจะจับเรียงลำดับใหม่ให้จอง GPU 0 ก่อน ตามด้วย 1 และ 2 เสมอ ทำให้ทุกโปรเซสต้องต่อคิวจองทรัพยากรไปในทิศทางเดียวกัน 
+  จึงไม่มีโอกาสที่โปรเซสสองตัวจะถือการ์ดจอสลับกันแล้วนั่งรอค้างกันเองแบบ Deadlock 
 
 ------------------------------------------------------
 
 2. Hardware Utilization:
-Look at the output of your Live Dashboard. Explain how the OS successfully ran Workload A (LLaMA Training), Workload B (Preprocessing), and Workload C (Inference) AT THE SAME TIME without crashing. Why didn't they block each other?
+Look at the output of your Live Dashboard. Explain how the OS successfully ran Workload A (LLaMA Training), Workload B (Preprocessing),
+ and Workload C (Inference) AT THE SAME TIME without crashing. Why didn't they block each other?
 
 Answer:
-โปรเซสทั้งสามสามารถทำงานพร้อมกันได้ (Parallel / Concurrent Execution) อย่างราบรื่นและไม่เกิดการบล็อกกัน เพราะระบบปฏิบัติการบริหารและจับคู่ทรัพยากรตาม Resource Requirements ที่ต่างกันได้อย่างลงตัว:
-1. การจัดสรร RAM: ความต้องการ RAM รวมของทั้ง 3 งานคือ 40GB (A) + 16GB (B) + 2GB (C) = 58GB ซึ่งไม่เกินขีดจำกัดความจุรวมของระบบ (Total 64GB) ทำให้ทุกงานได้รับการ Allocate หน่วยความจำพร้อมกันได้โดยไม่ต้องรอ
-2. การจัดสรร GPU โดยไม่ขัดแย้งกัน:
-   - Workload A (Distributed Training) จองใช้ GPU 0, 1, 2
-   - Workload B (Data Preprocessing) เป็นงานฝั่ง CPU-Bound / I/O-Bound ที่ไม่ใช้ GPU เลย (`req_gpus=[]`) จึงแทรกตัวทำงานบน CPU ขนานไปกับ A ได้ทันที
-   - Workload C (Inference API) ใช้เพียง 1 GPU ระบบจึงฉวยโอกาสส่งเข้าไปรันบน GPU 3 ซึ่งว่างอยู่พอดี
-ส่งผลให้ระบบสามารถดึงทรัพยากรทั้ง CPU, GPU และ RAM มาใช้งานได้อย่างเต็มประสิทธิภาพสูงสุด (Hardware Utilization) พร้อมกันโดยไม่มีงานใดติดขัด
+จากที่สังเกตบน Live Dashboard ทั้ง 3 งานสามารถรันไปพร้อมกันได้โดยไม่ชนกันและไม่ค้างเลย เพราะ OS จัดสรรทรัพยากรตามที่แต่ละงานต้องการได้อย่างพอดี:
+1. ด้าน RAM: ระบบมี RAM ทั้งหมด 64GB โดย Workload A ขอ 40GB, Workload B ขอ 16GB และ Workload C ขอ 2GB รวมกันใช้ไป 58GB (เหลือว่าง 6GB บน Dashboard)
+ ซึ่งไม่เกินขนาดจริงของเครื่อง ทำให้ทุกงานได้ RAM ครบและเริ่มงานได้พร้อมกันทันที
+2. ด้าน GPU: 
+   - Workload A เป็นงานเทรนหนัก จึงจองใช้ GPU 0, 1, 2
+   - Workload B เป็นงานเตรียมข้อมูลที่เน้นกิน CPU และ I/O โดยไม่ขอใช้ GPU เลย (`req_gpus=[]`) จึงแทรกไปรันบน CPU ได้ทันทีโดยไม่ต้องรอคิวการ์ดจอ
+   - Workload C เป็นงาน Inference เล็กๆ ที่ต้องการการ์ดจอแค่ 1 ใบ ระบบจึงส่งเข้าไปรันบน GPU 3 ที่ว่างอยู่พอดี
+ทำให้ฮาร์ดแวร์ทั้ง RAM, CPU และ GPU ทั้ง 4 ใบ ถูกดึงมาทำงานเต็มประสิทธิภาพพร้อมกัน 100% โดยไม่มีงานไหนต้องนั่งรอใคร
 
 ------------------------------------------------------
 
 3. Course Reflection (AI Engineering Context):
 You are now applying for a role as a Machine Learning Operations (MLOps) Engineer. 
-Write a short paragraph explaining how understanding Operating Systems (Process queues, RAM/Virtual Memory limits, Deadlock avoidance, File systems) gives you an advantage over a programmer who only knows how to write basic Python/PyTorch scripts.
+Write a short paragraph explaining how understanding Operating Systems (Process queues, RAM/Virtual Memory limits, Deadlock avoidance,
+File systems) gives you an advantage over a programmer who only knows how to write basic Python/PyTorch scripts.
 
 Answer:
-ความรู้ด้านระบบปฏิบัติการเป็นข้อได้เปรียบสำคัญที่สร้างความแตกต่างระหว่างการเป็นเพียงผู้เขียนสคริปต์ กับการเป็นวิศวกรระดับ MLOps ที่แท้จริง เพราะในการปรับใช้โมเดลขนาดใหญ่ในคลัสเตอร์จริง โมเดลส่วนใหญ่มักประสบปัญหาขวดที่ระดับระบบ ไม่ใช่ระดับคณิตศาสตร์ เช่น การเกิด GPU Starvation จากการอ่าน I/O ไม่ทัน, ปัญหา Out-Of-Memory (OOM) และ Swapping Thrashing จากการตั้งค่า Batch size และ Paging ไม่ถูกต้อง, หรือการเกิด Deadlock ในกระบวนการ Distributed Training ข้ามหลายการ์ดจอ การเข้าใจกลไกภายในของ OS ช่วยให้เราสามารถออกแบบ Data Pipeline (Sequential I/O, Inode caching), บริหารจัดการ Job Queues ร่วมกับ Orchestrator (เช่น Slurm, Kubernetes), วางสถาปัตยกรรม Permission ป้องกันไฟล์ Weights, ตลอดจนปรับแต่งขีดจำกัดหน่วยความจำและ CPU Schedulers ได้อย่างมีประสิทธิภาพสูงสุด ทำให้การเทรนและการเสิร์ฟโมเดลทำงานได้อย่างรวดเร็ว มีเสถียรภาพ และประหยัดต้นทุนค่าฮาร์ดแวร์ได้อย่างมหาศาล
+ความเข้าใจเรื่องกลไกภายในของระบบปฏิบัติการ (OS Internals) ช่วยให้เราก้าวข้ามการเป็นแค่ "คนสั่งรันสคริปต์" ไปเป็นวิศวกร MLOps ที่แก้ปัญหาหน้างานจริงได้ 
+เพราะเวลาเรานำโมเดลไปเทรนหรือรันบนเซิร์ฟเวอร์คลัสเตอร์จริงๆ ปัญหาคอขวดส่วนใหญ่มักไม่ได้อยู่ที่ตัวสูตรคณิตศาสตร์หรือโค้ดไพธอน แต่อยู่ที่ข้อจำกัดของระบบ 
+เช่น การ์ดจอราคาแพงนั่งว่างงาน (GPU Starvation) เพราะอ่านข้อมูลไฟล์แยกย่อยไม่ทัน, โมเดลหยุดนิ่งเพราะเกิดอาการ Thrashing จากการตั้ง Batch size เกิน RAM จริง, 
+หรือระบบค้างเพราะเกิด Deadlock ในระหว่างเทรนแบบกระจายหลายการ์ดจอ ความรู้เรื่อง OS ทำให้เราเข้าใจคอขวดที่แท้จริง สามารถออกแบบ Data Pipeline แบบ Sequential, 
+ตั้งค่าจัดการคิวร่วมกับพวก Slurm/Kubernetes, คุมสิทธิ์ไฟล์น้ำหนักโมเดลให้ปลอดภัย และรีดประสิทธิภาพฮาร์ดแวร์ออกมาได้คุ้มค่าและมีเสถียรภาพที่สุด
