@@ -5,28 +5,44 @@ Student ID: 67128389
 ======================================================
 
 1. Disk Scheduling (Phase 2):
-Looking at the output of `disk_scheduler.py`, why did the SCAN algorithm result in a significantly lower "Total Head Movement" compared to FCFS? Explain the logic behind the Elevator behavior.
+Looking at the output of `disk_scheduler.py`, why did the SCAN algorithm result in a significantly lower 
+"Total Head Movement" compared to FCFS? Explain the logic behind the Elevator behavior.
 
 Answer:
-อัลกอริทึม SCAN มีค่า Total Head Movement ต่ำกว่า FCFS อย่างมาก (SCAN เคลื่อนที่ 236 cylinders ขณะที่ FCFS เคลื่อนที่สูงถึง 640 cylinders) เพราะว่า:
-- ใน FCFS ระบบให้บริการตามลำดับคำร้องที่เข้ามา ทำให้หัวอ่านต้องกระโดดข้ามแทร็กไปมาอย่างไร้ทิศทาง (เช่น จาก 53 ข้ามไป 98, 183 แล้วตีกลับมาที่ 37) ส่งผลให้เสียเวลาและระยะเคลื่อนที่ของหัวอ่านสูงมาก
-- ส่วน SCAN ใช้แนวคิด "ลิฟต์ (Elevator Algorithm)" โดยหัวอ่านจะเคลื่อนที่ไปในทิศทางเดียวอย่างต่อเนื่อง (เช่น เลื่อนขึ้นจาก 53 ไปยังแทร็กที่มากกว่าจนถึงขอบสุดที่ 199) และตอบสนองทุกคำร้องที่อยู่ในเส้นทางผ่านทั้งหมดก่อน จากนั้นจึงกลับทิศทางเพื่อกวาดรับคำร้องที่เหลือขาลง การเคลื่อนที่เป็นเส้นทางเดียวแบบนี้ช่วยกำจัดปัญหาหัวอ่านกระตุกไป-มา ทำให้ระยะการเคลื่อนที่รวม (Seek Time) ลดลงอย่างมาก
+จากผลการรันสคริปต์จริง SCAN มีระยะการเคลื่อนที่ของหัวอ่านรวมแค่ 331 cylinders ซึ่งน้อยกว่า FCFS ที่พุ่งสูงไปถึง 640 cylinders เกือบเท่าตัวครับ สาเหตุเป็นเพราะ:
+- FCFS มันวิ่งตามใจคำขอที่เข้ามาแบบไม่จัดระเบียบ ใครขอก่อนก็ไปหาคนนั้นก่อน ทำให้หัวอ่านวิ่งกระโดดสลับไปมาอย่างไร้ทิศทาง(จาก 53 วิ่งไป 98, 183 แล้ววกรอบกลับมา 37) 
+ทำให้เสียระยะทางวิ่งและเสียเวลา Seek Time มหาศาล
+- ส่วน SCAN ใช้หลักการทำงานเหมือน "ลิฟต์รับคน (Elevator)" คือถ้าหัวอ่านกำลังเลื่อนขึ้น มันจะกวาดเก็บทุกคิวที่อยู่ในเส้นทางผ่านไปจนสุดขอบดิสก์ (วิ่งขึ้นไปจนถึง 199) 
+ การวิ่งทางเดียวต่อเนื่องแบบนี้ช่วยไม่ให้หัวอ่านกระตุกกลับไปกลับมาอย่างไร้ประโยชน์ ทำให้ระยะทางขยับของหัวอ่านสั้นลงและประหยัดเวลากว่ามาก
 
 ------------------------------------------------------
 
 2. I/O Bound Concept:
-If an Operating System is described as being "I/O Bound" during a task, what does that actually mean for the CPU? Is the CPU at 100% usage or is it mostly idle? Why?
+If an Operating System is described as being "I/O Bound" during a task, what does that actually mean for the CPU? Is the CPU at 100% usage
+ or is it mostly idle? Why?
 
 Answer:
-เมื่อระบบอยู่ในสภาวะ "I/O Bound" หมายความว่าคอขวดหลักของประสิทธิภาพขึ้นอยู่กับความเร็วในการอ่านหรือเขียนข้อมูลของอุปกรณ์จัดเก็บข้อมูล (Disk I/O) ซึ่งมีความล่าช้าสูงกว่าหน่วยประมวลผลมาก
+- สภาพของ CPU เมื่อเกิด I/O Bound:
+CPU จะ "ไม่ได้ทำงาน 100%" แต่จะอยู่ในสภาพ "ว่างงานเป็นส่วนใหญ่ (Mostly Idle หรือเกิดอาการ I/O Wait สูง)" 
 
-ในสถานการณ์นี้ CPU จะ "ไม่ได้อยู่ที่ 100%" แต่อยู่ในสถานะ "ว่างงานเป็นส่วนใหญ่ (Mostly Idle / High I/O Wait)" เนื่องจากโปรเซสต้องรอข้อมูลที่อ่านจากดิสก์ให้ส่งเข้ามาใน RAM ก่อน จึงถูกย้ายไปอยู่ใน Waiting State หรือ Blocked State ทำให้ CPU ไม่มีชุดคำสั่งให้ประมวลผลต่อ จึงต้องนั่งรอ Disk I/O ทำงานให้เสร็จสิ้น
+- เหตุผลตามความเข้าใจของผม:
+เพราะว่าคอขวดของงานอยู่ที่ความเร็วในการอ่านเขียนข้อมูลบน Storage/Disk ซึ่งทำงานช้ากว่า CPU มหาศาล 
+เมื่อโปรแกรมส่งคำสั่งขอข้อมูลไป ตัวโปรเซสจะต้องถูกเปลี่ยนสถานะไปเป็น Waiting State เพื่อรอให้ดิสก์อ่านข้อมูลเสร็จแล้วส่งเข้ามาที่ RAM เสียก่อน 
+ระหว่างที่รอข้อมูลส่งมา CPU ไม่มีคำสั่งอะไรให้ประมวลผลต่อ จึงต้องนั่งว่างงานรอคอย Disk I/O อยู่เฉยๆ 
 
 ------------------------------------------------------
 
 3. AI Industry Connection (Phase 3):
-Explain why storing an AI image dataset as 1,000,000 separate `.jpg` files causes high I/O overhead and GPU starvation compared to packing them into a single sequential binary format (e.g., TFRecord, WebDataset, or HDF5).
+Explain why storing an AI image dataset as 1,000,000 separate `.jpg` files causes high I/O overhead and GPU starvation 
+compared to packing them into a single sequential binary format (e.g., TFRecord, WebDataset, or HDF5).
 
 Answer:
-- การเก็บเป็นไฟล์แยก 1,000,000 ไฟล์ทำให้เกิดปัญหา Random I/O และ High OS Overhead สูงมาก เพราะระบบปฏิบัติการต้องเรียก System Calls (open, read, close) ซ้ำๆ นับล้านครั้ง ต้องเสียเวลาค้นหาตำแหน่ง Metadata, อ่าน Inode ตรวจสอบ File Permissions และเลื่อนหัวอ่านค้นหาบล็อกไฟล์ที่กระจายอยู่บนดิสก์ ส่งผลให้อัตราการดึงข้อมูลช้ามาก จนทำให้ GPU ประมวลผลเสร็จแล้วไม่มีข้อมูลชุดใหม่เข้ามาเทรน เกิดภาวะ "GPU Starvation" (GPU ใช้งานจริงต่ำหรือตกไปอยู่ที่ 0%)
-- การรวมข้อมูลไว้ในไฟล์ขนาดใหญ่แบบ Sequential Binary (เช่น TFRecord หรือ HDF5) ช่วยเปลี่ยนกระบวนการให้เป็นการอ่านแบบ Sequential I/O ซึ่งเปิดไฟล์เพียงครั้งเดียวแล้วสตรีมข้อมูลอ่านต่อเนื่องตามขนาดบล็อกได้ทันที ลด System Calls และ Seek Time ของดิสก์ได้อย่างมหาศาล ทำให้สามารถป้อนข้อมูล (Data Pipeline) ส่งไปยัง RAM และ GPU ได้อย่างรวดเร็วต่อเนื่อง ป้องกันอาการ GPU ว่างงานได้อย่างมีประสิทธิภาพ
+- ปัญหาจากการเก็บ 1,000,000 ไฟล์แยก (Random I/O):
+ทำให้ระบบปฏิบัติการเกิด OS Overhead มหาศาล เพราะต้องคอยเรียก System Calls คำสั่ง open, read, close ซ้ำๆ กันเป็นล้านรอบ อีกทั้งต้องคอยค้นหาตำแหน่ง Inode, 
+ Permission และหัวอ่านดิสก์ต้องวิ่งสุ่มหาบล็อกไฟล์ที่กระจายอยู่ทั่ว ส่งผลให้อ่านข้อมูลได้ช้ามาก จนเกิดภาวะ "GPU Starvation" คือการ์ดจอคำนวณรอบเดิมเสร็จแล้ว 
+ แต่นั่งว่างงาน (Usage ตกเหลือ 0%) เพราะดิสก์ส่งภาพรอบใหม่เข้ามาป้อนไม่ทัน
+
+- ทำไมรวมเป็นไฟล์ก้อนเดียว (Sequential Binary) ถึงดีกว่า:
+จากการรัน `ai_dataset_io.py` เห็นได้ชัดเจนมากว่า การอ่านไฟล์ย่อย 1,000 ไฟล์ใช้เวลาถึง 0.0217 วินาที แต่พอรวมเป็นไฟล์ก้อนเดียวแบบ 
+TFRecord ใช้เวลาเพียง 0.0024 วินาที (เร็วขึ้นเกือบ 10 เท่า) เพราะระบบเปิดไฟล์เพียงแค่ครั้งเดียวแล้วสตรีมข้อมูลอ่านต่อเนื่องตามขนาดบล็อกได้ทันที 
+ช่วยลดการเรียก System Calls และลดเวลา Seek Time ของดิสก์ ทำให้ Data Pipeline ป้อนข้อมูลเข้า RAM และ GPU ได้ไหลลื่น ไม่ปล่อยให้ GPU ต้องนั่งว่างงาน
